@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mes Tâches</title>
+  <script>
+    try { var s = JSON.parse(localStorage.getItem('todo-anim-v1')); if (s && s.theme) document.documentElement.dataset.theme = s.theme; } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Racing+Sans+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-mode="pro">
+  <div class="desert" aria-hidden="true">
+    <div class="stars"></div>
+    <div class="sun"></div>
+    <svg viewBox="0 0 1440 320" preserveAspectRatio="none" class="mesas">
+      <path class="mesa1" d="M0 220 L120 220 L150 150 L300 150 L330 220 L560 220 L590 120 L640 110 L700 110 L730 220 L1000 220 L1030 170 L1180 170 L1210 220 L1440 220 L1440 320 L0 320 Z"/>
+      <path class="mesa2" d="M0 260 Q360 230 720 255 T1440 250 L1440 320 L0 320 Z"/>
+    </svg>
+    <svg viewBox="0 0 40 80" class="cactus c1"><path d="M17 80 V12 a3 3 0 0 1 6 0 V80 Z M17 44 H9 V28 a3 3 0 0 1 6 0 V38 H17 Z M23 36 H29 V22 a3 3 0 0 1 6 0 V42 H23 Z"/></svg>
+    <svg viewBox="0 0 40 80" class="cactus c2"><path d="M17 80 V12 a3 3 0 0 1 6 0 V80 Z M17 44 H9 V28 a3 3 0 0 1 6 0 V38 H17 Z M23 36 H29 V22 a3 3 0 0 1 6 0 V42 H23 Z"/></svg>
+  </div>
+
+  <main class="app">
+    <header>
+      <p class="hello" id="hello">Bonjour</p>
+      <h1>Mes tâches <span class="bolt">⚡</span></h1>
+      <button class="theme-btn" id="themeBtn" type="button">🌙 Nuit</button>
+    </header>
+
+    <nav class="switch" role="tablist">
+      <button class="mode-btn active" data-mode="pro" role="tab">
+        <span class="mode-name">🏁 Pro</span><small>Piston Cup</small><span class="badge" id="badge-pro">0</span>
+      </button>
+      <button class="mode-btn" data-mode="perso" role="tab">
+        <span class="mode-name">🌵 Perso</span><small>Radiator Springs</small><span class="badge" id="badge-perso">0</span>
+      </button>
+    </nav>
+
+    <form class="composer" id="composer" autocomplete="off">
+      <div class="row">
+        <input id="taskInput" type="text" maxlength="140" placeholder="Une nouvelle tâche pro…">
+        <button class="add" type="submit">Ajouter</button>
+      </div>
+      <div class="opts">
+        <div class="prio" id="prio">
+          <button type="button" data-p="low"><i></i>Basse</button>
+          <button type="button" data-p="med" class="active"><i></i>Moyenne</button>
+          <button type="button" data-p="high"><i></i>Haute</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="toolbar">
+      <div class="filters" id="filters">
+        <button data-f="all" class="active">Toutes</button>
+        <button data-f="todo">À faire</button>
+        <button data-f="done">Terminées</button>
+      </div>
+      <div class="tools">
+        <label class="sort">
+          Trier
+          <select id="sortSelect">
+            <option value="manual">Manuel</option>
+            <option value="prio">Par priorité</option>
+          </select>
+        </label>
+        <button class="clear" id="clearDone">Retirer les terminées</button>
+      </div>
+    </div>
+
+    <div class="progress">
+      <div class="progress-head">
+        <span><b id="count">0 / 0</b> tâches faites</span>
+        <b class="pct"><span id="pct">0</span>%</b>
+      </div>
+      <div class="bar"><div class="fill" id="fill"></div></div>
+      <p class="progress-txt" id="summary"></p>
+    </div>
+
+    <ul class="list" id="list"></ul>
+
+    <div class="empty" id="empty" hidden>
+      <div class="empty-emo" id="emptyEmo">🏁</div>
+      <p id="emptyText">Piste dégagée !</p>
+    </div>
+
+    <p class="hint">Double-clic pour modifier · 📝 pour une note · glisser pour réordonner (tri manuel) · <kbd>N</kbd> pour une nouvelle tâche</p>
+  </main>
+
+  <div class="toasts" id="toasts"></div>
+  <script src="app.js"></script>
+</body>
+</html>
