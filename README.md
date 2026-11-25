@@ -5,7 +5,7 @@ Une to-do list perso sur le thème du film *Cars*, en HTML, CSS et JavaScript, s
 ## Fonctionnalités
 
 - Deux listes séparées : **🏁 Pro** (Piston Cup) et **🌵 Perso** (Radiator Springs)
-- Jauge de priorité à 4 niveaux : basse, moyenne, haute et important
+- Jauge de priorité (basse, moyenne, haute) et marqueur **Urgent** à combiner avec n'importe quel niveau
 - Notes sur chaque tâche
 - Filtres (toutes, à faire, terminées) et tri manuel ou par priorité
 - Réordonner les tâches par glisser-déposer

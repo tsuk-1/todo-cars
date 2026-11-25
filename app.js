@@ -6,16 +6,18 @@
   const composer = $('#composer');
   const MODES = ['pro', 'perso'];
   // Du moins au plus prioritaire : la position donne le niveau de la jauge
-  const PRIOS = ['low', 'med', 'high', 'imp'];
-  const PRIO_NAMES = { low: 'Basse', med: 'Moyenne', high: 'Haute', imp: 'Important' };
+  const PRIOS = ['low', 'med', 'high'];
+  const PRIO_NAMES = { low: 'Basse', med: 'Moyenne', high: 'Haute' };
+  // L'urgence s'ajoute au niveau : Haute + urgent passe devant tout le reste
+  const score = (t) => PRIOS.indexOf(t.priority) + (t.urgent ? 1.5 : 0);
 
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
   // ---------- État ----------
   function demo() {
-    const t = (text, mode, priority = 'med', done = false, note = '') => ({ id: uid(), text, mode, priority, done, note, created: Date.now() });
+    const t = (text, mode, priority = 'med', done = false, note = '', urgent = false) => ({ id: uid(), text, mode, priority, urgent, done, note, created: Date.now() });
     return [
-      t('Préparer la réunion de lundi', 'pro', 'imp', false, 'Slides + ordre du jour, salle B'),
+      t('Préparer la réunion de lundi', 'pro', 'high', false, 'Slides + ordre du jour, salle B', true),
       t('Répondre aux mails clients', 'pro', 'med'),
       t('Mettre à jour le rapport mensuel', 'pro', 'low', true),
       t('Faire les courses', 'perso', 'med', false, 'Lait, œufs, pâtes'),
@@ -36,7 +38,10 @@
   let state = load();
   if (state.sort !== 'prio') state.sort = 'manual';
   if (!MODES.includes(state.mode)) state.mode = 'pro';
+  // Ancien niveau « Important » : devient Haute + urgent
+  state.tasks.forEach((t) => { if (t.priority === 'imp') { t.priority = 'high'; t.urgent = true; } });
   let prio = 'med';
+  let urgent = false;
   let lastDeleted = null;
 
   function setupHeader() {
@@ -51,7 +56,7 @@
 
   function sortTasks(arr) {
     if (state.sort === 'manual') return arr;
-    return [...arr].sort((a, b) => (a.done - b.done) || PRIOS.indexOf(b.priority) - PRIOS.indexOf(a.priority));
+    return [...arr].sort((a, b) => (a.done - b.done) || score(b) - score(a));
   }
 
   // ---------- Rendu ----------
@@ -74,14 +79,17 @@
 
   function makeItem(t, settled = false) {
     const li = document.createElement('li');
-    li.className = 'task p-' + t.priority + (t.done ? ' done' : '') + (settled ? ' settled' : '');
+    li.className = 'task p-' + t.priority + (t.urgent ? ' urgent' : '') + (t.done ? ' done' : '') + (settled ? ' settled' : '');
     li.dataset.id = t.id;
     li.draggable = state.sort === 'manual';
     li.innerHTML = `
       <span class="grip" aria-hidden="true">⋮⋮</span>
       <button class="check" aria-label="Marquer comme terminée"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
       <div class="body"><span class="text"></span><div class="meta"></div></div>
-      <span class="gauge"></span>
+      <div class="rate">
+        <span class="gauge"></span>
+        <button type="button" class="urgent-btn${t.urgent ? ' on' : ''}" aria-pressed="${!!t.urgent}" aria-label="Urgent" title="${t.urgent ? 'Retirer l’urgence' : 'Marquer comme urgent'}">🚨</button>
+      </div>
       <div class="actions">
         <button class="note-btn${t.note ? ' has' : ''}" aria-label="Note" title="Note">${ICON_NOTE}</button>
         <button class="del" aria-label="Supprimer" title="Supprimer">${ICON_DEL}</button>
@@ -94,7 +102,7 @@
       c.textContent = txt;
       meta.appendChild(c);
     };
-    if (t.priority === 'imp') chip('imp', 'Important');
+    if (t.urgent) chip('urgent', t.priority === 'high' ? 'Grosse priorité' : 'Urgent');
     fillGauge(li.querySelector('.gauge'), t.priority);
     if (t.note) {
       const p = document.createElement('p');
@@ -161,10 +169,11 @@
       input.focus();
       return;
     }
-    const t = { id: uid(), text, mode: state.mode, priority: prio, done: false, note: '', created: Date.now() };
+    const t = { id: uid(), text, mode: state.mode, priority: prio, urgent, done: false, note: '', created: Date.now() };
     state.tasks.unshift(t);
     save();
     input.value = '';
+    setUrgent(false);
     if (state.filter === 'done') setFilter('all');
     else if (state.sort !== 'manual') render();
     else { list.prepend(makeItem(t)); updateUI(); }
@@ -189,16 +198,22 @@
     $('#prioName').textContent = PRIO_NAMES[p];
   }
 
-  function setPriority(id, li, p) {
+  function setUrgent(on) {
+    urgent = on;
+    $('#urgentBtn').classList.toggle('on', on);
+    $('#urgentBtn').setAttribute('aria-pressed', on);
+  }
+
+  function rate(id, li, changes, focusSel) {
     const t = state.tasks.find((x) => x.id === id);
-    if (!t || t.priority === p) return;
-    t.priority = p;
+    if (!t) return;
+    Object.assign(t, changes);
     save();
     if (state.sort !== 'manual') render();
     else {
       const item = makeItem(t, true);
       li.replaceWith(item);
-      item.querySelector(`.gauge [data-p="${p}"]`).focus({ preventScroll: true });
+      item.querySelector(focusSel).focus({ preventScroll: true });
     }
   }
 
@@ -416,9 +431,10 @@
   // ---------- Événements ----------
   composer.addEventListener('submit', addTask);
   $('#prio').addEventListener('click', (e) => {
-    const b = e.target.closest('button');
+    const b = e.target.closest('.gauge button');
     if (b) setPrio(b.dataset.p);
   });
+  $('#urgentBtn').addEventListener('click', () => setUrgent(!urgent));
   document.querySelectorAll('.mode-btn').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
   $('#filters').addEventListener('click', (e) => {
     const b = e.target.closest('button');
@@ -436,7 +452,8 @@
     const li = e.target.closest('.task');
     if (!li) return;
     const seg = e.target.closest('.gauge button');
-    if (seg) setPriority(li.dataset.id, li, seg.dataset.p);
+    if (seg) rate(li.dataset.id, li, { priority: seg.dataset.p }, `.gauge [data-p="${seg.dataset.p}"]`);
+    else if (e.target.closest('.urgent-btn')) rate(li.dataset.id, li, { urgent: !li.classList.contains('urgent') }, '.urgent-btn');
     else if (e.target.closest('.check')) toggle(li.dataset.id, li);
     else if (e.target.closest('.del')) removeTask(li.dataset.id, li);
     else if (e.target.closest('.note-btn') || e.target.closest('.note')) openNote(li, li.dataset.id);
