@@ -5,7 +5,9 @@
   const input = $('#taskInput');
   const composer = $('#composer');
   const MODES = ['pro', 'perso'];
-  const PRIO_RANK = { high: 0, med: 1, low: 2 };
+  // Du moins au plus prioritaire : la position donne le niveau de la jauge
+  const PRIOS = ['low', 'med', 'high', 'imp'];
+  const PRIO_NAMES = { low: 'Basse', med: 'Moyenne', high: 'Haute', imp: 'Important' };
 
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -13,7 +15,7 @@
   function demo() {
     const t = (text, mode, priority = 'med', done = false, note = '') => ({ id: uid(), text, mode, priority, done, note, created: Date.now() });
     return [
-      t('Préparer la réunion de lundi', 'pro', 'high', false, 'Slides + ordre du jour, salle B'),
+      t('Préparer la réunion de lundi', 'pro', 'imp', false, 'Slides + ordre du jour, salle B'),
       t('Répondre aux mails clients', 'pro', 'med'),
       t('Mettre à jour le rapport mensuel', 'pro', 'low', true),
       t('Faire les courses', 'perso', 'med', false, 'Lait, œufs, pâtes'),
@@ -49,12 +51,26 @@
 
   function sortTasks(arr) {
     if (state.sort === 'manual') return arr;
-    return [...arr].sort((a, b) => (a.done - b.done) || PRIO_RANK[a.priority] - PRIO_RANK[b.priority]);
+    return [...arr].sort((a, b) => (a.done - b.done) || PRIOS.indexOf(b.priority) - PRIOS.indexOf(a.priority));
   }
 
   // ---------- Rendu ----------
   const ICON_NOTE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>';
   const ICON_DEL = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
+
+  function fillGauge(el, priority) {
+    const level = PRIOS.indexOf(priority);
+    el.dataset.p = priority;
+    el.setAttribute('role', 'group');
+    el.setAttribute('aria-label', 'Priorité : ' + PRIO_NAMES[priority]);
+    if (!el.children.length) {
+      el.innerHTML = PRIOS.map((p) => `<button type="button" data-p="${p}" title="${PRIO_NAMES[p]}" aria-label="${PRIO_NAMES[p]}"><i></i></button>`).join('');
+    }
+    [...el.children].forEach((b, i) => {
+      b.classList.toggle('on', i <= level);
+      b.setAttribute('aria-pressed', i === level);
+    });
+  }
 
   function makeItem(t, settled = false) {
     const li = document.createElement('li');
@@ -65,6 +81,7 @@
       <span class="grip" aria-hidden="true">⋮⋮</span>
       <button class="check" aria-label="Marquer comme terminée"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
       <div class="body"><span class="text"></span><div class="meta"></div></div>
+      <span class="gauge"></span>
       <div class="actions">
         <button class="note-btn${t.note ? ' has' : ''}" aria-label="Note" title="Note">${ICON_NOTE}</button>
         <button class="del" aria-label="Supprimer" title="Supprimer">${ICON_DEL}</button>
@@ -77,7 +94,8 @@
       c.textContent = txt;
       meta.appendChild(c);
     };
-    if (t.priority === 'high') chip('high', 'Urgent');
+    if (t.priority === 'imp') chip('imp', 'Important');
+    fillGauge(li.querySelector('.gauge'), t.priority);
     if (t.note) {
       const p = document.createElement('p');
       p.className = 'note';
@@ -163,6 +181,25 @@
     updateUI();
     const vt = viewTasks();
     if (t.done && vt.length && vt.every((x) => x.done)) celebrate();
+  }
+
+  function setPrio(p) {
+    prio = p;
+    fillGauge($('#prioGauge'), p);
+    $('#prioName').textContent = PRIO_NAMES[p];
+  }
+
+  function setPriority(id, li, p) {
+    const t = state.tasks.find((x) => x.id === id);
+    if (!t || t.priority === p) return;
+    t.priority = p;
+    save();
+    if (state.sort !== 'manual') render();
+    else {
+      const item = makeItem(t, true);
+      li.replaceWith(item);
+      item.querySelector(`.gauge [data-p="${p}"]`).focus({ preventScroll: true });
+    }
   }
 
   function removeTask(id, li) {
@@ -380,9 +417,7 @@
   composer.addEventListener('submit', addTask);
   $('#prio').addEventListener('click', (e) => {
     const b = e.target.closest('button');
-    if (!b) return;
-    prio = b.dataset.p;
-    document.querySelectorAll('#prio button').forEach((x) => x.classList.toggle('active', x === b));
+    if (b) setPrio(b.dataset.p);
   });
   document.querySelectorAll('.mode-btn').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
   $('#filters').addEventListener('click', (e) => {
@@ -400,7 +435,9 @@
   list.addEventListener('click', (e) => {
     const li = e.target.closest('.task');
     if (!li) return;
-    if (e.target.closest('.check')) toggle(li.dataset.id, li);
+    const seg = e.target.closest('.gauge button');
+    if (seg) setPriority(li.dataset.id, li, seg.dataset.p);
+    else if (e.target.closest('.check')) toggle(li.dataset.id, li);
     else if (e.target.closest('.del')) removeTask(li.dataset.id, li);
     else if (e.target.closest('.note-btn') || e.target.closest('.note')) openNote(li, li.dataset.id);
   });
@@ -423,6 +460,7 @@
   setupHeader();
   updateThemeBtn();
   applyMode();
+  setPrio(prio);
   $('#sortSelect').value = state.sort;
   document.querySelectorAll('#filters button').forEach((b) => b.classList.toggle('active', b.dataset.f === state.filter));
   render();

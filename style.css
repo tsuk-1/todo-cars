@@ -24,8 +24,9 @@
   --yellow: #f6b500;
   --title-shadow: 3px 3px 0 var(--yellow);
   --low: #5f9e4f;
-  --med: #e89a1c;
-  --high: #d62828;
+  --med: #e5b015;
+  --high: #e8641b;
+  --imp: #c8102e;
   --del-hover: #fbe0da;
   --mesa1: #e0a06a; --mesa2: #d48a54; --cactus: #6f8f4e;
   --sun: #fff3d1; --sun-glow: none;
@@ -57,7 +58,8 @@
   --title-shadow: 0 0 18px color-mix(in srgb, var(--a1) 55%, transparent), 2px 2px 0 #00000055;
   --low: #6fc463;
   --med: #f0ad3c;
-  --high: #ef4b50;
+  --high: #ff8442;
+  --imp: #ef3b52;
   --del-hover: #4a2230;
   --mesa1: #2e2244; --mesa2: #241a36; --cactus: #2d4a3c;
   --sun: #f4ecd2; --sun-glow: 0 0 60px 10px rgba(244, 236, 210, .25);
@@ -171,18 +173,29 @@ h1 {
 .add:active { filter: brightness(.92); }
 
 .opts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding-top: 10px; border-top: 1px dashed var(--border); }
-.prio { display: flex; gap: 6px; flex-wrap: wrap; }
-.prio button, .filters button, .clear, .sort {
+.prio { display: flex; gap: 10px; align-items: center; }
+.prio-label { font-size: 14px; color: var(--muted); }
+.prio-name { font-size: 14px; min-width: 76px; }
+
+/* ---------- Jauge de priorité ---------- */
+.gauge { --gc: var(--med); display: inline-flex; flex: none; }
+.gauge[data-p="low"] { --gc: var(--low); }
+.gauge[data-p="high"] { --gc: var(--high); }
+.gauge[data-p="imp"] { --gc: var(--imp); }
+.gauge button { display: grid; place-items: center; width: 18px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; }
+.gauge i { width: 14px; height: 10px; border-radius: 3px; background: var(--track); box-shadow: inset 0 0 0 1px var(--border-strong); transition: background .2s ease; }
+.gauge .on i { background: var(--gc); box-shadow: none; }
+.gauge button:hover i { box-shadow: inset 0 0 0 2px var(--text); }
+.gauge.big button { width: 36px; height: 32px; }
+.gauge.big i { width: 32px; height: 12px; }
+.done .gauge { opacity: .45; }
+
+.filters button, .clear, .sort {
   font: inherit; font-size: 14px; color: var(--muted); background: var(--soft);
   border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; cursor: pointer;
   display: inline-flex; align-items: center; gap: 7px; transition: color .15s, background .15s, border-color .15s;
 }
-.prio button:hover, .filters button:hover, .clear:hover, .sort:hover { color: var(--text); border-color: var(--border-strong); }
-.prio i { width: 9px; height: 9px; border-radius: 50%; }
-.prio [data-p="low"] i { background: var(--low); }
-.prio [data-p="med"] i { background: var(--med); }
-.prio [data-p="high"] i { background: var(--high); }
-.prio button.active { color: var(--text); background: var(--selected); border-color: var(--border-strong); font-weight: 600; }
+.filters button:hover, .clear:hover, .sort:hover { color: var(--text); border-color: var(--border-strong); }
 .sort select { background: none; border: 0; color: inherit; font: inherit; outline: 0; cursor: pointer; }
 .sort select option { background: var(--card); color: var(--text); }
 
@@ -212,6 +225,8 @@ h1 {
 }
 .task.p-low { --pc: var(--low); }
 .task.p-high { --pc: var(--high); }
+.task.p-imp { --pc: var(--imp); }
+.task.p-imp:not(.done) { background: color-mix(in srgb, var(--imp) 9%, var(--card)); }
 .task:hover { box-shadow: 0 8px 20px -12px var(--shadow); }
 .task.settled { animation: none; }
 .task.leaving { animation: taskOut .3s ease forwards; pointer-events: none; }
@@ -245,7 +260,7 @@ h1 {
 .meta { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
 .meta:empty { display: none; }
 .chip { font-size: 12px; padding: 2px 9px; border-radius: 7px; background: var(--chip); color: var(--muted); font-weight: 500; }
-.chip.high { color: #fff; background: var(--high); }
+.chip.imp { color: #fff; background: #c8102e; font-weight: 600; }
 .done .chip { opacity: .55; }
 
 .note {
@@ -269,7 +284,7 @@ h1 {
 .task:hover .del, .task:hover .note-btn, .del:focus-visible, .note-btn:focus-visible, .note-btn.has { opacity: 1; }
 .note-btn.has { color: var(--a1); }
 .note-btn:hover { background: var(--soft); color: var(--text); }
-.del:hover { background: var(--del-hover); color: var(--high); }
+.del:hover { background: var(--del-hover); color: var(--imp); }
 @media (hover: none) { .del, .note-btn { opacity: .7; } .grip { display: none; } }
 
 /* ---------- Vide ---------- */
@@ -299,6 +314,10 @@ kbd { font-family: inherit; padding: 1px 6px; border-radius: 5px; border: 1px so
   .toolbar { flex-direction: column; align-items: stretch; }
   .filters button { flex: 1; justify-content: center; }
   .tools > * { flex: 1; justify-content: center; }
+  .task { flex-wrap: wrap; row-gap: 4px; }
+  .task .gauge { order: 3; width: 100%; padding-left: 36px; }
+  .task .gauge button { width: 34px; height: 30px; }
+  .task .gauge i { width: 30px; }
   .sun { width: 80px; height: 80px; }
 }
 
